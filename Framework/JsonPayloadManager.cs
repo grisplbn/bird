@@ -71,9 +71,10 @@ namespace Bird.Framework
 
         /// <summary>
         /// Modifies a value in the JSON node at the specified path.
+        /// Supports dot notation and array indices (e.g., "addresses.0.city").
         /// </summary>
         /// <param name="node">JsonNode to modify</param>
-        /// <param name="path">Dot-notation path to the value (e.g., "user.name")</param>
+        /// <param name="path">Dot-notation path to the value (e.g., "user.name" or "addresses.0.city")</param>
         /// <param name="value">New value to set</param>
         /// <exception cref="ArgumentNullException">Thrown when node is null</exception>
         /// <exception cref="InvalidOperationException">Thrown when path cannot be accessed</exception>
@@ -81,32 +82,67 @@ namespace Bird.Framework
         {
             ArgumentNullException.ThrowIfNull(node);
             var parts = path.Split('.');
-            var current = node;
+            JsonNode? current = node;
 
-            // Navigate to the parent node
             for (int i = 0; i < parts.Length - 1; i++)
             {
-                if (current[parts[i]] == null)
+                var part = parts[i];
+                if (int.TryParse(part, out int index))
                 {
-                    current[parts[i]] = new JsonObject();
+                    // Array index
+                    if (current is JsonArray arr)
+                    {
+                        if (arr.Count <= index)
+                        {
+                            // Expand array if needed
+                            while (arr.Count <= index)
+                                arr.Add(new JsonObject());
+                        }
+                        current = arr[index];
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Expected array at '{part}' in path '{path}'");
+                    }
                 }
-                current = current[parts[i]] ?? 
+                else
+                {
+                    // Object property
+                    if (current[part] == null)
+                    {
+                        // If next part is an int, create array, else object
+                        if (i + 1 < parts.Length && int.TryParse(parts[i + 1], out _))
+                            current[part] = new JsonArray();
+                        else
+                            current[part] = new JsonObject();
+                    }
+                    current = current[part];
+                }
+                if (current == null)
                     throw new InvalidOperationException($"Failed to access path {path}");
             }
 
-            // Set the value at the final path
             var lastPart = parts[^1];
-            if (value == null)
+            if (int.TryParse(lastPart, out int lastIndex))
             {
-                current[lastPart] = null;
-            }
-            else if (value is JsonNode jsonNode)
-            {
-                current[lastPart] = jsonNode;
+                if (current is JsonArray arr)
+                {
+                    if (arr.Count <= lastIndex)
+                    {
+                        // Expand array if needed
+                        while (arr.Count <= lastIndex)
+                            arr.Add(null);
+                    }
+                    arr[lastIndex] = value is JsonNode jsonNode ? jsonNode : JsonValue.Create(value);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Expected array at '{lastPart}' in path '{path}'");
+                }
             }
             else
             {
-                current[lastPart] = JsonValue.Create(value);
+                current[lastPart] = value is JsonNode jsonNode ? jsonNode : JsonValue.Create(value);
             }
         }
 
