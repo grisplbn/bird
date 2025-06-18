@@ -48,6 +48,8 @@ dotnet build
 
 ## Configuration
 
+### Environment-Specific Settings
+
 The framework supports multiple environments through configuration files:
 
 - `Config/appsettings.json`: Base configuration
@@ -55,7 +57,7 @@ The framework supports multiple environments through configuration files:
 - `Config/appsettings.Staging.json`: Staging environment settings
 - `Config/appsettings.Production.json`: Production environment settings
 
-### Configuration Structure
+Each environment file can override settings from the base configuration. For example:
 
 ```json
 {
@@ -75,9 +77,9 @@ The framework supports multiple environments through configuration files:
 }
 ```
 
-## Running Tests
+### Running Tests in Different Environments
 
-### Using Environment Variables
+#### Using Environment Variables
 
 ```powershell
 # Development environment
@@ -90,7 +92,7 @@ $env:ASPNETCORE_ENVIRONMENT="Staging"; dotnet test
 $env:ASPNETCORE_ENVIRONMENT="Production"; dotnet test
 ```
 
-### Using Command Line Parameters
+#### Using Command Line Parameters
 
 ```powershell
 # Development environment
@@ -103,7 +105,7 @@ dotnet test --environment Staging
 dotnet test --environment Production
 ```
 
-### Programmatically in Test Code
+#### Programmatically in Test Code
 
 ```csharp
 // At the start of your test class or test setup
@@ -126,35 +128,12 @@ public class YourApiTests : BaseApiTest
         var payload = await _payloadManager.LoadAndModifyPayloadAsync("create-user.json");
 
         // Act
-        var response = await SendRequestAsync(HttpMethod.Post, "users", payload);
+        var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
 
         // Assert
-        AssertResponseCode(response, (int)HttpStatusCode.Created);  // 201
-        // or
-        AssertResponseCode(response, 201);  // Using numeric code
+        AssertResponseCode(response, (int)HttpStatusCode.Created);
     }
 }
-```
-
-#### HTTP Response Code Assertions
-
-The framework provides flexible ways to assert HTTP response codes:
-
-```csharp
-// Using HttpStatusCode enum
-AssertResponseCode(response, (int)HttpStatusCode.OK);        // 200
-AssertResponseCode(response, (int)HttpStatusCode.Created);   // 201
-AssertResponseCode(response, (int)HttpStatusCode.BadRequest);// 400
-
-// Using numeric codes
-AssertResponseCode(response, 200);  // OK
-AssertResponseCode(response, 201);  // Created
-AssertResponseCode(response, 400);  // Bad Request
-```
-
-The assertion provides clear error messages when the expected code doesn't match:
-```
-Expected status code 201 but got 400
 ```
 
 ### JSON Payload Management
@@ -192,7 +171,7 @@ The `JsonPayloadManager` supports:
 - Removing fields completely from the JSON structure
 - Handling nested objects and arrays
 
-#### Response Field Extraction and Assertions
+### Response Field Extraction and Assertions
 
 The framework provides flexible ways to extract and assert values from response JSON:
 
@@ -209,7 +188,7 @@ await AssertResponseFieldAsync(response, "user.age", 30);
 
 // Extract and use values in subsequent requests
 var userId = await ExtractValueFromResponseAsync<string>(response, "data.id");
-var updateResponse = await SendRequestAsync(HttpMethod.Put, $"users/{userId}", updatePayload);
+var updateResponse = await SendRequestAsync<JsonNode>(HttpMethod.Put, $"users/{userId}", updatePayload);
 ```
 
 The framework supports:
@@ -219,27 +198,169 @@ The framework supports:
 - Direct assertions against expected values
 - Clear error messages when assertions fail
 
+### Logging
+
+The framework provides comprehensive logging functionality to help with debugging and test execution tracking:
+
+```csharp
+// Logs are automatically created for each test
+[Test]
+public async Task YourTest_ShouldDoSomething()
+{
+    // Logs are automatically generated for:
+    // - Test start and end
+    // - API requests and responses
+    // - Assertions and validations
+    // - Errors and exceptions
+}
+```
+
+#### Log Output
+
+The framework provides two types of log output:
+
+1. **Terminal Output**
+   - Real-time logging during test execution
+   - Color-coded messages for better visibility
+   - Formatted JSON for better readability
+   - Immediate feedback for debugging
+
+   Example terminal output:
+   ```
+   [2024-03-14 10:15:30.123] [INFO] Starting test: CreateUser_ShouldReturnCreatedUserWithId
+   [2024-03-14 10:15:30.234] [REQUEST] POST users
+   [2024-03-14 10:15:30.234] [REQUEST] Payload:
+   {
+     "name": "John Doe",
+     "email": "john@example.com"
+   }
+   [2024-03-14 10:15:30.345] [RESPONSE] Status Code: 201
+   [2024-03-14 10:15:30.345] [RESPONSE] Content:
+   {
+     "data": {
+       "id": "123",
+       "name": "John Doe"
+     }
+   }
+   ```
+
+2. **Log Files**
+   - Persistent logs stored in the `Logs` directory
+   - One log file per test execution
+   - Named with test name and timestamp
+   - Contains all test execution details
+
+#### Log Levels and Colors
+
+The framework uses different colors for different log levels:
+- **INFO** (White): General information about test execution
+- **WARN** (Yellow): Warning messages for potential issues
+- **ERROR** (Red): Error messages and exceptions
+- **REQUEST** (Cyan): API request details
+- **RESPONSE** (Green): API response details
+- **Timestamp** (Gray): Time information
+
+#### Logging Best Practices
+
+1. **Terminal Output**
+   - Use terminal output for immediate feedback
+   - Watch for color-coded messages
+   - Check formatted JSON for readability
+   - Monitor test progress in real-time
+
+2. **Log Files**
+   - Review log files for detailed analysis
+   - Use logs for debugging failed tests
+   - Archive logs for historical reference
+   - Implement log rotation if needed
+
+3. **Debugging**
+   - Use terminal output for quick debugging
+   - Check log files for detailed information
+   - Look for color-coded error messages
+   - Review formatted JSON responses
+
+4. **CI/CD Integration**
+   - Terminal output works in CI/CD pipelines
+   - Log files are available as artifacts
+   - Color coding helps identify issues
+   - JSON formatting improves readability
+
 ## Best Practices
 
-1. **Environment-Specific Configuration**
+### Environment-Specific Configuration
+
+1. **Configuration Files**
    - Keep sensitive data in environment-specific files
    - Use environment variables for secrets
    - Never commit production credentials
+   - Document all configuration options
 
-2. **Test Data Management**
+2. **Environment Selection**
+   - Use Development for local testing
+   - Use Staging for pre-production testing
+   - Use Production only for production testing
+   - Document environment-specific behaviors
+
+### Test Data Management
+
+1. **JSON Files**
    - Store test data in JSON files
    - Use meaningful file names
    - Keep test data minimal and focused
+   - Document data structure and requirements
 
-3. **Test Organization**
+2. **Data Modification**
+   - Use `JsonPayloadManager` for data modifications
+   - Keep modifications close to the test
+   - Document complex data transformations
+   - Use constants for common values
+
+3. **Data Cleanup**
+   - Clean up test data after tests
+   - Use unique identifiers for test data
+   - Document cleanup procedures
+   - Handle cleanup failures gracefully
+
+### Test Organization
+
+1. **Test Structure**
    - Group related tests in test classes
    - Use descriptive test names
    - Follow the Arrange-Act-Assert pattern
+   - Document test prerequisites
 
-4. **Error Handling**
+2. **Test Dependencies**
+   - Minimize test dependencies
+   - Use setup and teardown methods
+   - Document test dependencies
+   - Handle dependency failures
+
+3. **Test Categories**
+   - Categorize tests by feature
+   - Use test categories for filtering
+   - Document test categories
+   - Maintain category consistency
+
+### Error Handling
+
+1. **Response Validation**
    - Test both success and failure scenarios
    - Validate error responses
    - Include appropriate assertions
+   - Document expected errors
+
+2. **Error Messages**
+   - Use clear error messages
+   - Include relevant context
+   - Document error scenarios
+   - Handle unexpected errors
+
+3. **Logging**
+   - Log important test steps
+   - Include relevant context
+   - Document logging requirements
+   - Handle logging failures
 
 ## Troubleshooting
 
@@ -249,16 +370,25 @@ The framework supports:
    - Ensure configuration files are in the correct location
    - Check file names match environment names
    - Verify file properties are set to "Copy to Output Directory"
+   - Check file permissions
 
 2. **API Connection Issues**
    - Verify API server is running
    - Check API base URL in configuration
    - Ensure network connectivity
+   - Check firewall settings
 
 3. **Test Data Issues**
    - Verify JSON file paths
    - Check JSON syntax
    - Ensure required fields are present
+   - Validate data types
+
+4. **Response Assertion Issues**
+   - Check response structure
+   - Verify field paths
+   - Ensure correct data types
+   - Check for null values
 
 ## Contributing
 

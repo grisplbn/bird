@@ -15,6 +15,8 @@ namespace Bird.Framework
         protected HttpClient _httpClient = null!;
         // JSON serialization options
         protected JsonSerializerOptions _jsonOptions = null!;
+        // Logger instance
+        protected TestLogger _logger = null!;
 
         /// <summary>
         /// One-time setup method that runs before any tests in the class.
@@ -32,6 +34,31 @@ namespace Bird.Framework
             {
                 PropertyNameCaseInsensitive = true
             };
+        }
+
+        /// <summary>
+        /// Setup method that runs before each test.
+        /// Initializes the logger for the current test.
+        /// </summary>
+        [SetUp]
+        public virtual void SetUp()
+        {
+            _logger = new TestLogger(TestContext.CurrentContext.Test.Name);
+            _logger.LogInfo($"Starting test: {TestContext.CurrentContext.Test.Name}");
+        }
+
+        /// <summary>
+        /// Teardown method that runs after each test.
+        /// Saves the test log and cleans up resources.
+        /// </summary>
+        [TearDown]
+        public virtual async Task TearDown()
+        {
+            if (_logger != null)
+            {
+                _logger.LogInfo($"Finished test: {TestContext.CurrentContext.Test.Name}");
+                await _logger.SaveLogAsync();
+            }
         }
 
         /// <summary>
@@ -59,6 +86,8 @@ namespace Bird.Framework
             T? payload = default,
             Dictionary<string, string>? headers = null)
         {
+            _logger.LogRequest(method.ToString(), endpoint, payload);
+
             var request = new HttpRequestMessage(method, endpoint);
 
             if (headers != null)
@@ -74,7 +103,12 @@ namespace Bird.Framework
                 request.Content = JsonContent.Create(payload, options: _jsonOptions);
             }
 
-            return await _httpClient.SendAsync(request);
+            var response = await _httpClient.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            _logger.LogResponse((int)response.StatusCode, content);
+            
+            return response;
         }
 
         /// <summary>
@@ -86,9 +120,23 @@ namespace Bird.Framework
         /// <exception cref="InvalidOperationException">Thrown when deserialization fails</exception>
         protected async Task<T> DeserializeResponseAsync<T>(HttpResponseMessage response)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            return JsonSerializer.Deserialize<T>(content, _jsonOptions) ?? 
-                throw new InvalidOperationException($"Failed to deserialize response to {typeof(T).Name}");
+            try
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                
+                if (result == null)
+                {
+                    throw new InvalidOperationException($"Failed to deserialize response to {typeof(T).Name}");
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to deserialize response to {typeof(T).Name}", ex);
+                throw;
+            }
         }
 
         /// <summary>
@@ -98,8 +146,11 @@ namespace Bird.Framework
         /// <param name="expectedCode">Expected HTTP status code</param>
         protected void AssertResponseCode(HttpResponseMessage response, int expectedCode)
         {
-            Assert.That((int)response.StatusCode, Is.EqualTo(expectedCode),
-                $"Expected status code {expectedCode} but got {(int)response.StatusCode}");
+            var actualCode = (int)response.StatusCode;
+            _logger.LogInfo($"Asserting response code: Expected {expectedCode}, Got {actualCode}");
+            
+            Assert.That(actualCode, Is.EqualTo(expectedCode),
+                $"Expected status code {expectedCode} but got {actualCode}");
         }
 
         /// <summary>
@@ -140,23 +191,37 @@ namespace Bird.Framework
         /// <exception cref="InvalidOperationException">Thrown when value cannot be extracted</exception>
         protected async Task<T> ExtractValueFromResponseAsync<T>(HttpResponseMessage response, string jsonPath)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            var jsonDoc = JsonDocument.Parse(content);
-            
-            var pathParts = jsonPath.Split('.');
-            var currentElement = jsonDoc.RootElement;
-
-            foreach (var part in pathParts)
+            try
             {
-                if (currentElement.ValueKind != JsonValueKind.Object)
-                {
-                    throw new InvalidOperationException($"Cannot navigate to '{part}' in path '{jsonPath}'");
-                }
-                currentElement = currentElement.GetProperty(part);
-            }
+                var content = await response.Content.ReadAsStringAsync();
+                var jsonDoc = JsonDocument.Parse(content);
+                
+                var pathParts = jsonPath.Split('.');
+                var currentElement = jsonDoc.RootElement;
 
-            return currentElement.Deserialize<T>(_jsonOptions) ?? 
-                throw new InvalidOperationException($"Failed to extract value at path '{jsonPath}'");
+                foreach (var part in pathParts)
+                {
+                    if (currentElement.ValueKind != JsonValueKind.Object)
+                    {
+                        throw new InvalidOperationException($"Cannot navigate to '{part}' in path '{jsonPath}'");
+                    }
+                    currentElement = currentElement.GetProperty(part);
+                }
+
+                var value = currentElement.Deserialize<T>(_jsonOptions);
+                if (value == null)
+                {
+                    throw new InvalidOperationException($"Failed to extract value at path '{jsonPath}'");
+                }
+
+                _logger.LogInfo($"Extracted value from path '{jsonPath}': {value}");
+                return value;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to extract value from path '{jsonPath}'", ex);
+                throw;
+            }
         }
 
         /// <summary>
@@ -168,9 +233,19 @@ namespace Bird.Framework
         /// <param name="expectedValue">Expected value</param>
         protected async Task AssertResponseFieldAsync<T>(HttpResponseMessage response, string jsonPath, T expectedValue)
         {
-            var actualValue = await ExtractValueFromResponseAsync<T>(response, jsonPath);
-            Assert.That(actualValue, Is.EqualTo(expectedValue),
-                $"Expected value at path '{jsonPath}' to be {expectedValue} but got {actualValue}");
+            try
+            {
+                var actualValue = await ExtractValueFromResponseAsync<T>(response, jsonPath);
+                _logger.LogInfo($"Asserting field '{jsonPath}': Expected {expectedValue}, Got {actualValue}");
+                
+                Assert.That(actualValue, Is.EqualTo(expectedValue),
+                    $"Expected value at path '{jsonPath}' to be {expectedValue} but got {actualValue}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Failed to assert field '{jsonPath}'", ex);
+                throw;
+            }
         }
     }
 } 
