@@ -192,6 +192,33 @@ The `JsonPayloadManager` supports:
 - Removing fields completely from the JSON structure
 - Handling nested objects and arrays
 
+#### Response Field Extraction and Assertions
+
+The framework provides flexible ways to extract and assert values from response JSON:
+
+```csharp
+// Extract a value and store it for later use
+var userId = await ExtractValueFromResponseAsync<string>(response, "data.id");
+var userName = await ExtractValueFromResponseAsync<string>(response, "user.name");
+var age = await ExtractValueFromResponseAsync<int>(response, "user.age");
+
+// Assert a specific field value
+await AssertResponseFieldAsync(response, "data.id", "12345");
+await AssertResponseFieldAsync(response, "user.name", "John Doe");
+await AssertResponseFieldAsync(response, "user.age", 30);
+
+// Extract and use values in subsequent requests
+var userId = await ExtractValueFromResponseAsync<string>(response, "data.id");
+var updateResponse = await SendRequestAsync(HttpMethod.Put, $"users/{userId}", updatePayload);
+```
+
+The framework supports:
+- Extracting values of any type (string, int, bool, etc.)
+- Nested JSON paths (e.g., "user.address.city")
+- Storing extracted values for later use
+- Direct assertions against expected values
+- Clear error messages when assertions fail
+
 ## Best Practices
 
 1. **Environment-Specific Configuration**

@@ -1,6 +1,8 @@
 using System.Net;
+using System.Net.Http;
 using System.Text.Json.Nodes;
 using Bird.Framework;
+using NUnit.Framework;
 
 namespace Bird.Tests
 {
@@ -49,24 +51,31 @@ namespace Bird.Tests
         /// - Extract and verify the response
         /// </summary>
         [Test]
-        public async Task CreateUser_ShouldReturnCreated()
+        public async Task CreateUser_ShouldReturnCreatedUserWithId()
         {
             // Arrange
             var payload = await _payloadManager.LoadAndModifyPayloadAsync(
                 "create-user.json",
                 new Dictionary<string, object>
                 {
-                    { "email", $"test_{Guid.NewGuid()}@example.com" }
-                }
-            );
+                    { "name", "John Doe" },
+                    { "email", "john.doe@example.com" }
+                });
 
             // Act
             var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.Created);
-            var userId = await ExtractGuidFromResponseAsync(response);
-            Assert.That(!string.IsNullOrEmpty(userId), "User ID should not be empty");
+            
+            // Extract and store the user ID for later use
+            var userId = await ExtractValueFromResponseAsync<string>(response, "data.id");
+            Assert.That(userId, Is.Not.Empty, "User ID should not be empty");
+
+            // Assert other fields in the response
+            await AssertResponseFieldAsync(response, "data.name", "John Doe");
+            await AssertResponseFieldAsync(response, "data.email", "john.doe@example.com");
+            await AssertResponseFieldAsync(response, "data.status", "active");
         }
 
         /// <summary>
@@ -77,24 +86,119 @@ namespace Bird.Tests
         /// - Extract error messages
         /// </summary>
         [Test]
-        public async Task CreateUser_WithInvalidData_ShouldReturnBadRequest()
+        public async Task CreateUser_WithInvalidData_ShouldReturnValidationErrors()
         {
             // Arrange
             var payload = await _payloadManager.LoadAndModifyPayloadAsync(
                 "create-user.json",
                 new Dictionary<string, object>
                 {
-                    { "email", "invalid-email" }
-                }
-            );
+                    { "name", "" },  // Invalid empty name
+                    { "email", "invalid-email" }  // Invalid email format
+                });
 
             // Act
             var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.BadRequest);
-            var error = await ExtractErrorFromResponseAsync(response);
-            Assert.That(error, Is.Not.Empty, "Error message should not be empty");
+            
+            // Extract and assert validation errors
+            var errors = await ExtractValueFromResponseAsync<Dictionary<string, string[]>>(response, "errors");
+            Assert.That(errors.ContainsKey("name"), "Should have name validation error");
+            Assert.That(errors.ContainsKey("email"), "Should have email validation error");
+            
+            // Assert specific error messages
+            await AssertResponseFieldAsync(response, "errors.name[0]", "Name is required");
+            await AssertResponseFieldAsync(response, "errors.email[0]", "Invalid email format");
+        }
+
+        [Test]
+        public async Task GetUser_ShouldReturnUserDetails()
+        {
+            // Arrange
+            var createPayload = await _payloadManager.LoadAndModifyPayloadAsync(
+                "create-user.json",
+                new Dictionary<string, object>
+                {
+                    { "name", "Jane Smith" },
+                    { "email", "jane.smith@example.com" }
+                });
+
+            // Create a user first
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
+
+            // Act
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Get, $"users/{userId}");
+
+            // Assert
+            AssertResponseCode(response, (int)HttpStatusCode.OK);
+            await AssertResponseFieldAsync(response, "data.id", userId);
+            await AssertResponseFieldAsync(response, "data.name", "Jane Smith");
+            await AssertResponseFieldAsync(response, "data.email", "jane.smith@example.com");
+        }
+
+        [Test]
+        public async Task UpdateUser_ShouldModifyUserDetails()
+        {
+            // Arrange
+            var createPayload = await _payloadManager.LoadAndModifyPayloadAsync(
+                "create-user.json",
+                new Dictionary<string, object>
+                {
+                    { "name", "Original Name" },
+                    { "email", "original@example.com" }
+                });
+
+            // Create a user first
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
+
+            // Prepare update payload
+            var updatePayload = await _payloadManager.LoadAndModifyPayloadAsync(
+                "update-user.json",
+                new Dictionary<string, object>
+                {
+                    { "name", "Updated Name" },
+                    { "email", "updated@example.com" }
+                });
+
+            // Act
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Put, $"users/{userId}", updatePayload);
+
+            // Assert
+            AssertResponseCode(response, (int)HttpStatusCode.OK);
+            await AssertResponseFieldAsync(response, "data.id", userId);
+            await AssertResponseFieldAsync(response, "data.name", "Updated Name");
+            await AssertResponseFieldAsync(response, "data.email", "updated@example.com");
+        }
+
+        [Test]
+        public async Task DeleteUser_ShouldRemoveUser()
+        {
+            // Arrange
+            var createPayload = await _payloadManager.LoadAndModifyPayloadAsync(
+                "create-user.json",
+                new Dictionary<string, object>
+                {
+                    { "name", "To Be Deleted" },
+                    { "email", "delete@example.com" }
+                });
+
+            // Create a user first
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
+
+            // Act
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Delete, $"users/{userId}");
+
+            // Assert
+            AssertResponseCode(response, (int)HttpStatusCode.NoContent);
+
+            // Verify user is deleted by trying to get it
+            var getResponse = await SendRequestAsync<JsonNode>(HttpMethod.Get, $"users/{userId}");
+            AssertResponseCode(getResponse, (int)HttpStatusCode.NotFound);
         }
 
         [Test]

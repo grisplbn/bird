@@ -129,5 +129,48 @@ namespace Bird.Framework
             return jsonDoc.RootElement.GetProperty("error").GetString() ?? 
                 throw new InvalidOperationException("Failed to extract error message from response");
         }
+
+        /// <summary>
+        /// Extracts a value from the response JSON using a JSON path.
+        /// </summary>
+        /// <typeparam name="T">Type of the value to extract</typeparam>
+        /// <param name="response">HTTP response message</param>
+        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "user.name")</param>
+        /// <returns>Extracted value</returns>
+        /// <exception cref="InvalidOperationException">Thrown when value cannot be extracted</exception>
+        protected async Task<T> ExtractValueFromResponseAsync<T>(HttpResponseMessage response, string jsonPath)
+        {
+            var content = await response.Content.ReadAsStringAsync();
+            var jsonDoc = JsonDocument.Parse(content);
+            
+            var pathParts = jsonPath.Split('.');
+            var currentElement = jsonDoc.RootElement;
+
+            foreach (var part in pathParts)
+            {
+                if (currentElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidOperationException($"Cannot navigate to '{part}' in path '{jsonPath}'");
+                }
+                currentElement = currentElement.GetProperty(part);
+            }
+
+            return currentElement.Deserialize<T>(_jsonOptions) ?? 
+                throw new InvalidOperationException($"Failed to extract value at path '{jsonPath}'");
+        }
+
+        /// <summary>
+        /// Asserts that a specific field in the response matches the expected value.
+        /// </summary>
+        /// <typeparam name="T">Type of the value to compare</typeparam>
+        /// <param name="response">HTTP response message</param>
+        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "user.name")</param>
+        /// <param name="expectedValue">Expected value</param>
+        protected async Task AssertResponseFieldAsync<T>(HttpResponseMessage response, string jsonPath, T expectedValue)
+        {
+            var actualValue = await ExtractValueFromResponseAsync<T>(response, jsonPath);
+            Assert.That(actualValue, Is.EqualTo(expectedValue),
+                $"Expected value at path '{jsonPath}' to be {expectedValue} but got {actualValue}");
+        }
     }
 } 
