@@ -1,0 +1,11 @@
+{
+    "type": "email",
+    "value": "not-an-email",
+    "isPrimary": true,
+    "label": "Invalid",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "invalid"
+    }
+} 

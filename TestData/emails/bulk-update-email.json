@@ -1,0 +1,26 @@
+{
+    "updates": [
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "isPrimary": true,
+            "label": "Work",
+            "metadata": {
+                "verified": true,
+                "lastVerified": "2024-03-20T10:00:00Z"
+            }
+        },
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "isPrimary": false,
+            "label": "Personal",
+            "metadata": {
+                "verified": false,
+                "lastVerified": null
+            }
+        }
+    ],
+    "options": {
+        "skipValidation": false,
+        "notifyUsers": true
+    }
+} 

@@ -1,0 +1,17 @@
+{
+    "type": "address",
+    "label": "Invalid",
+    "isPrimary": true,
+    "street": "",
+    "city": null,
+    "state": "XX",
+    "postalCode": "invalid",
+    "country": "XX",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "invalid",
+        "latitude": 999.999,
+        "longitude": 999.999
+    }
+} 

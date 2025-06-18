@@ -1,0 +1,15 @@
+{
+    "filters": {
+        "type": "email",
+        "isPrimary": true,
+        "verified": true,
+        "label": ["Work", "Personal"]
+    },
+    "pagination": {
+        "page": 1,
+        "pageSize": 10,
+        "sortBy": "lastVerified",
+        "sortOrder": "desc"
+    },
+    "includeMetadata": true
+} 

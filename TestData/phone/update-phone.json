@@ -1,0 +1,14 @@
+{
+    "id": "00000000-0000-0000-0000-000000000000",
+    "type": "phone",
+    "value": "+1-555-987-6543",
+    "isPrimary": false,
+    "label": "Work",
+    "countryCode": "US",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "sms",
+        "carrier": "AT&T"
+    }
+} 

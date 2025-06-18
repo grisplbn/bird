@@ -1,0 +1,16 @@
+{
+    "filters": {
+        "type": "phone",
+        "countryCode": "US",
+        "carrier": ["Verizon", "AT&T"],
+        "verified": true
+    },
+    "pagination": {
+        "page": 1,
+        "pageSize": 20,
+        "sortBy": "value",
+        "sortOrder": "asc"
+    },
+    "includeMetadata": true,
+    "includeCarrierInfo": true
+} 

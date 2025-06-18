@@ -1,0 +1,31 @@
+{
+    "updates": [
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "isPrimary": true,
+            "label": "Mobile",
+            "countryCode": "US",
+            "metadata": {
+                "verified": true,
+                "carrier": "Verizon",
+                "lastVerified": "2024-03-20T10:00:00Z"
+            }
+        },
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "isPrimary": false,
+            "label": "Work",
+            "countryCode": "US",
+            "metadata": {
+                "verified": false,
+                "carrier": "AT&T",
+                "lastVerified": null
+            }
+        }
+    ],
+    "options": {
+        "skipValidation": false,
+        "notifyUsers": true,
+        "updateCarrierInfo": true
+    }
+} 

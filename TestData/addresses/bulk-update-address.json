@@ -1,0 +1,35 @@
+{
+    "updates": [
+        {
+            "id": "00000000-0000-0000-0000-000000000001",
+            "isPrimary": true,
+            "label": "Home",
+            "city": "New York",
+            "state": "NY",
+            "metadata": {
+                "verified": true,
+                "lastVerified": "2024-03-20T10:00:00Z",
+                "latitude": 40.7128,
+                "longitude": -74.0060
+            }
+        },
+        {
+            "id": "00000000-0000-0000-0000-000000000002",
+            "isPrimary": false,
+            "label": "Work",
+            "city": "San Francisco",
+            "state": "CA",
+            "metadata": {
+                "verified": false,
+                "lastVerified": null,
+                "latitude": 37.7749,
+                "longitude": -122.4194
+            }
+        }
+    ],
+    "options": {
+        "skipValidation": false,
+        "notifyUsers": true,
+        "updateGeolocation": true
+    }
+} 

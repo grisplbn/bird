@@ -1,0 +1,11 @@
+{
+    "type": "email",
+    "value": "john.doe@example.com",
+    "isPrimary": true,
+    "label": "Work",
+    "metadata": {
+        "verified": false,
+        "lastVerified": null,
+        "verificationMethod": "pending"
+    }
+} 

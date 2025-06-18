@@ -1,0 +1,15 @@
+{
+    "type": "user",
+    "email": "test@example.com",
+    "firstName": "John",
+    "lastName": "Doe",
+    "isActive": true,
+    "metadata": {
+        "createdAt": "2024-03-20T10:00:00Z",
+        "lastLogin": null,
+        "preferences": {
+            "language": "en",
+            "timezone": "UTC"
+        }
+    }
+} 

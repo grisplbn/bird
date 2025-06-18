@@ -1,0 +1,22 @@
+{
+    "filters": {
+        "type": "address",
+        "country": "US",
+        "state": ["NY", "CA"],
+        "verified": true
+    },
+    "pagination": {
+        "page": 1,
+        "pageSize": 15,
+        "sortBy": "city",
+        "sortOrder": "asc"
+    },
+    "includeMetadata": true,
+    "includeGeolocation": true,
+    "radius": {
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "distance": 50,
+        "unit": "miles"
+    }
+} 

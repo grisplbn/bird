@@ -1,0 +1,18 @@
+{
+    "type": "address",
+    "label": "Home",
+    "isPrimary": true,
+    "street": "123 Main Street",
+    "street2": "Apt 4B",
+    "city": "New York",
+    "state": "NY",
+    "postalCode": "10001",
+    "country": "US",
+    "metadata": {
+        "verified": false,
+        "lastVerified": null,
+        "verificationMethod": "pending",
+        "latitude": 40.7128,
+        "longitude": -74.0060
+    }
+} 

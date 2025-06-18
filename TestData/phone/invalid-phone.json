@@ -1,0 +1,13 @@
+{
+    "type": "phone",
+    "value": "not-a-phone",
+    "isPrimary": true,
+    "label": "Invalid",
+    "countryCode": "XX",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "invalid",
+        "carrier": "Unknown"
+    }
+} 

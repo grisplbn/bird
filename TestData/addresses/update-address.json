@@ -1,0 +1,19 @@
+{
+    "id": "00000000-0000-0000-0000-000000000000",
+    "type": "address",
+    "label": "Work",
+    "isPrimary": false,
+    "street": "456 Business Ave",
+    "street2": "Suite 100",
+    "city": "San Francisco",
+    "state": "CA",
+    "postalCode": "94105",
+    "country": "US",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "postal",
+        "latitude": 37.7749,
+        "longitude": -122.4194
+    }
+} 

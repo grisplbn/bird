@@ -1,0 +1,12 @@
+{
+    "id": "00000000-0000-0000-0000-000000000000",
+    "type": "email",
+    "value": "john.doe.updated@example.com",
+    "isPrimary": true,
+    "label": "Personal",
+    "metadata": {
+        "verified": true,
+        "lastVerified": "2024-03-20T10:00:00Z",
+        "verificationMethod": "email"
+    }
+} 

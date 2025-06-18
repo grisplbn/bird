@@ -19,7 +19,11 @@ namespace Bird.Framework
         /// <param name="payloadsDirectory">Directory containing JSON payload files (default: "TestData")</param>
         public JsonPayloadManager(string payloadsDirectory = "TestData")
         {
-            _payloadsDirectory = payloadsDirectory;
+            _payloadsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, payloadsDirectory);
+            if (!Directory.Exists(_payloadsDirectory))
+            {
+                throw new DirectoryNotFoundException($"Test data directory not found: {_payloadsDirectory}");
+            }
         }
 
         /// <summary>
@@ -30,12 +34,18 @@ namespace Bird.Framework
         /// <param name="fieldsToRemove">List of fields to remove from the JSON</param>
         /// <returns>Modified JsonNode</returns>
         /// <exception cref="InvalidOperationException">Thrown when JSON parsing fails</exception>
+        /// <exception cref="FileNotFoundException">Thrown when the payload file is not found</exception>
         public async Task<JsonNode> LoadAndModifyPayloadAsync(
             string payloadFileName,
             Dictionary<string, object>? modifications = null,
             List<string>? fieldsToRemove = null)
         {
             var payloadPath = Path.Combine(_payloadsDirectory, payloadFileName);
+            if (!File.Exists(payloadPath))
+            {
+                throw new FileNotFoundException($"Payload file not found: {payloadPath}");
+            }
+
             var jsonContent = await File.ReadAllTextAsync(payloadPath);
             var jsonNode = JsonNode.Parse(jsonContent) ?? 
                 throw new InvalidOperationException($"Failed to parse JSON from {payloadFileName}");

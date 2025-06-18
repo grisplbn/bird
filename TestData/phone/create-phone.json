@@ -1,0 +1,13 @@
+{
+    "type": "phone",
+    "value": "+1-555-123-4567",
+    "isPrimary": true,
+    "label": "Mobile",
+    "countryCode": "US",
+    "metadata": {
+        "verified": false,
+        "lastVerified": null,
+        "verificationMethod": "pending",
+        "carrier": "Verizon"
+    }
+} 
