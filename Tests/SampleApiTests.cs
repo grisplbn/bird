@@ -67,7 +67,7 @@ namespace Bird.Tests
                 });
 
             // Act
-            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, ApiEndpoints.Users.Create, payload);
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.Created);
@@ -104,7 +104,7 @@ namespace Bird.Tests
                 });
 
             // Act
-            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, ApiEndpoints.Users.Create, payload);
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.BadRequest);
@@ -129,11 +129,11 @@ namespace Bird.Tests
                 });
 
             // Create a user first
-            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, ApiEndpoints.Users.Create, createPayload);
             var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
 
             // Act
-            var response = await SendRequestAsync<JsonNode>(HttpMethod.Get, $"users/{userId}");
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Get, ApiEndpoints.Users.GetById(userId));
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.OK);
@@ -157,7 +157,7 @@ namespace Bird.Tests
                 });
 
             // Create a user first
-            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, ApiEndpoints.Users.Create, createPayload);
             var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
 
             // Prepare update payload
@@ -170,7 +170,7 @@ namespace Bird.Tests
                 });
 
             // Act
-            var response = await SendRequestAsync<JsonNode>(HttpMethod.Put, $"users/{userId}", updatePayload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Put, ApiEndpoints.Users.Update(userId), updatePayload);
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.OK);
@@ -194,17 +194,17 @@ namespace Bird.Tests
                 });
 
             // Create a user first
-            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", createPayload);
+            var createResponse = await SendRequestAsync<JsonNode>(HttpMethod.Post, ApiEndpoints.Users.Create, createPayload);
             var userId = await ExtractValueFromResponseAsync<string>(createResponse, "data.id");
 
             // Act
-            var response = await SendRequestAsync<JsonNode>(HttpMethod.Delete, $"users/{userId}");
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Delete, ApiEndpoints.Users.Delete(userId));
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.NoContent);
 
             // Verify user is deleted by trying to get it
-            var getResponse = await SendRequestAsync<JsonNode>(HttpMethod.Get, $"users/{userId}");
+            var getResponse = await SendRequestAsync<JsonNode>(HttpMethod.Get, ApiEndpoints.Users.GetById(userId));
             AssertResponseCode(getResponse, (int)HttpStatusCode.NotFound);
         }
 
