@@ -9,7 +9,7 @@ namespace Bird.Framework
     /// Base class for all API tests. Provides common functionality for making HTTP requests,
     /// handling responses, and asserting results. This class should be inherited by all API test classes.
     /// </summary>
-    public abstract class BaseApiTest
+    public abstract class BaseApiTest : IDisposable
     {
         // HttpClient instance for making API requests
         protected HttpClient _httpClient = null!;
@@ -19,52 +19,98 @@ namespace Bird.Framework
         protected TestLogger _logger = null!;
 
         /// <summary>
-        /// Sets up the test environment before running the test.
+        /// Gets or sets the environment for the current test.
+        /// Override this property in derived classes to specify a different environment for all tests in the fixture.
         /// </summary>
-        /// <param name="environment">Optional environment name. If not provided, uses the environment from command line.</param>
-        protected void SetupTestEnvironment(string? environment = null)
+        protected virtual string? TestEnvironment => null;
+
+        /// <summary>
+        /// Sets the environment for the current test.
+        /// This environment will be used instead of the fixture environment or command line environment.
+        /// </summary>
+        /// <param name="environment">Environment name (Development, Staging, Production)</param>
+        protected void SetEnvironment(string environment)
         {
-            if (!string.IsNullOrEmpty(environment))
+            if (string.IsNullOrEmpty(environment))
+                throw new ArgumentException("Environment name cannot be null or empty", nameof(environment));
+            
+            TestConfiguration.SetTestEnvironment(environment);
+            
+            // Create a new HttpClient with the new base address
+            _httpClient?.Dispose();
+            _httpClient = new HttpClient
             {
-                TestConfiguration.SetTestEnvironment(environment);
+                BaseAddress = new Uri(TestConfiguration.GetApiBaseUrl())
+            };
+            
+            _logger.LogInfo($"Environment set to: {environment}");
+            _logger.LogInfo($"Base URL set to: {_httpClient.BaseAddress}");
+        }
+
+        /// <summary>
+        /// Sets up the test environment before running the test.
+        /// This method is called automatically before each test.
+        /// </summary>
+        [SetUp]
+        protected virtual void SetupTestEnvironment()
+        {
+            // Initialize logger first
+            _logger = new TestLogger(TestContext.CurrentContext.Test.Name);
+            _logger.LogInfo($"Starting test: {TestContext.CurrentContext.Test.Name}");
+
+            // Initialize HttpClient if not already initialized
+            if (_httpClient == null)
+            {
+                _httpClient = new HttpClient
+                {
+                    BaseAddress = new Uri(TestConfiguration.GetApiBaseUrl())
+                };
+            }
+
+            // Initialize JSON options if not already initialized
+            if (_jsonOptions == null)
+            {
+                _jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+            }
+
+            if (!string.IsNullOrEmpty(TestEnvironment))
+            {
+                TestConfiguration.SetTestEnvironment(TestEnvironment);
+                // Create a new HttpClient with the new base address
+                _httpClient?.Dispose();
+                _httpClient = new HttpClient
+                {
+                    BaseAddress = new Uri(TestConfiguration.GetApiBaseUrl())
+                };
+                _logger.LogInfo($"Using fixture environment: {TestEnvironment}");
+                _logger.LogInfo($"Base URL set to: {_httpClient.BaseAddress}");
             }
         }
 
         /// <summary>
         /// Cleans up the test environment after running the test.
+        /// This method is called automatically after each test.
         /// </summary>
-        protected void CleanupTestEnvironment()
+        [TearDown]
+        protected virtual void CleanupTestEnvironment()
         {
             TestConfiguration.ResetTestEnvironment();
         }
 
         /// <summary>
         /// One-time setup for all tests in the fixture.
-        /// Initializes the HTTP client and JSON options.
+        /// Initializes the JSON options.
         /// </summary>
         [OneTimeSetUp]
         public virtual void OneTimeSetUp()
         {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(TestConfiguration.GetApiBaseUrl())
-            };
-            
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
-        }
-
-        /// <summary>
-        /// Setup method that runs before each test.
-        /// Initializes the logger for the current test.
-        /// </summary>
-        [SetUp]
-        public virtual void SetUp()
-        {
-            _logger = new TestLogger(TestContext.CurrentContext.Test.Name);
-            _logger.LogInfo($"Starting test: {TestContext.CurrentContext.Test.Name}");
         }
 
         /// <summary>
@@ -79,6 +125,10 @@ namespace Bird.Framework
                 _logger.LogInfo($"Finished test: {TestContext.CurrentContext.Test.Name}");
                 await _logger.SaveLogAsync();
             }
+
+            // Dispose of the HttpClient
+            _httpClient?.Dispose();
+            _httpClient = null!;
         }
 
         /// <summary>
@@ -89,6 +139,16 @@ namespace Bird.Framework
         public virtual void OneTimeTearDown()
         {
             _httpClient?.Dispose();
+            _httpClient = null!;
+        }
+
+        /// <summary>
+        /// Implementation of IDisposable pattern
+        /// </summary>
+        public void Dispose()
+        {
+            _httpClient?.Dispose();
+            _httpClient = null!;
         }
 
         /// <summary>
@@ -106,7 +166,12 @@ namespace Bird.Framework
             T? payload = default,
             Dictionary<string, string>? headers = null)
         {
-            _logger.LogRequest(method.ToString(), endpoint, payload);
+            var fullUri = new Uri(_httpClient.BaseAddress!, endpoint).ToString();
+            _logger.LogInfo($"[REQUEST] {method} {fullUri}");
+            if (payload != null)
+            {
+                _logger.LogInfo($"[REQUEST] Payload: {JsonSerializer.Serialize(payload, _jsonOptions)}");
+            }
 
             var request = new HttpRequestMessage(method, endpoint);
 
@@ -149,7 +214,7 @@ namespace Bird.Framework
                 {
                     throw new InvalidOperationException($"Failed to deserialize response to {typeof(T).Name}");
                 }
-                
+
                 return result;
             }
             catch (Exception ex)

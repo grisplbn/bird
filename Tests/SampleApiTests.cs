@@ -46,26 +46,19 @@ namespace Bird.Tests
 
         /// <summary>
         /// Tests the health check endpoint using a specific environment.
+        /// Environment is set within the test.
         /// </summary>
         [Test]
         public async Task HealthCheck_ShouldReturnOk_OnStaging()
         {
-            // Arrange
-            SetupTestEnvironment("Staging");
+            // Set environment for this test
+            SetEnvironment("Staging");
 
-            try
-            {
-                // Act
-                var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
+            // Act
+            var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
 
-                // Assert
-                AssertResponseCode(response, (int)HttpStatusCode.OK);
-            }
-            finally
-            {
-                // Cleanup
-                CleanupTestEnvironment();
-            }
+            // Assert
+            AssertResponseCode(response, (int)HttpStatusCode.OK);
         }
 
         /// <summary>
@@ -259,14 +252,17 @@ namespace Bird.Tests
 
         /// <summary>
         /// Tests creating a resource using a specific environment.
+        /// Environment is set within the test.
         /// </summary>
         [Test]
         [AllureIssue("API-124")]
         [AllureTms("API-126")]
         public async Task CreateResource_ShouldReturnCreatedResource_OnStaging()
         {
+            // Set environment for this test
+            SetEnvironment("Staging");
+
             // Arrange
-            SetupTestEnvironment("Staging");
             var payload = await _payloadManager.LoadAndModifyPayloadAsync(
                 "create-resource.json",
                 new Dictionary<string, object>
@@ -275,20 +271,12 @@ namespace Bird.Tests
                     { "description", "This is a test resource" }
                 });
 
-            try
-            {
-                // Act
-                var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "resources", payload);
+            // Act
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "resources", payload);
 
-                // Assert
-                AssertResponseCode(response, (int)HttpStatusCode.Created);
-                await AssertResponseFieldAsync(response, "data.name", "Test Resource");
-            }
-            finally
-            {
-                // Cleanup
-                CleanupTestEnvironment();
-            }
+            // Assert
+            AssertResponseCode(response, (int)HttpStatusCode.Created);
+            await AssertResponseFieldAsync(response, "data.name", "Test Resource");
         }
 
         [Test]
@@ -336,6 +324,46 @@ namespace Bird.Tests
             AssertResponseCode(response, 400);
             var error = await ExtractErrorFromResponseAsync(response);
             Assert.That(error, Is.Not.Null.And.Not.Empty);
+        }
+
+        /// <summary>
+        /// Test fixture for Staging environment tests.
+        /// All tests in this fixture will use the Staging environment by default.
+        /// </summary>
+        [TestFixture]
+        public class StagingTests : SampleApiTests
+        {
+            protected override string? TestEnvironment => "Staging";
+
+            /// <summary>
+            /// This test will use Staging environment by default (from fixture),
+            /// but can override it if needed.
+            /// </summary>
+            [Test]
+            public async Task Test_WithStagingEnvironment()
+            {
+                // Act
+                var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
+
+                // Assert
+                AssertResponseCode(response, (int)HttpStatusCode.OK);
+            }
+
+            /// <summary>
+            /// This test overrides the fixture's Staging environment with Production.
+            /// </summary>
+            [Test]
+            public async Task Test_OverrideWithProduction()
+            {
+                // Override fixture's environment
+                SetEnvironment("Production");
+
+                // Act
+                var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
+
+                // Assert
+                AssertResponseCode(response, (int)HttpStatusCode.OK);
+            }
         }
     }
 } 
