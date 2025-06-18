@@ -16,13 +16,15 @@ namespace Bird.Configuration
         private static IConfiguration? _configuration;
         private static readonly object _lock = new object();
         private static string _environment = "Development"; // Default environment
+        private static string? _testEnvironment; // Environment specified for current test
 
         /// <summary>
-        /// Gets the current environment name (Development, Staging, Production, etc.)
+        /// Gets or sets the current environment (Development, Staging, Production).
+        /// If test environment is set, it takes precedence over the global environment.
         /// </summary>
         public static string Environment
         {
-            get => _environment;
+            get => _testEnvironment ?? _environment;
             set
             {
                 if (string.IsNullOrEmpty(value))
@@ -30,6 +32,28 @@ namespace Bird.Configuration
                 _environment = value;
                 _configuration = null; // Force reload of configuration
             }
+        }
+
+        /// <summary>
+        /// Sets the environment for the current test.
+        /// This environment will be used instead of the global environment until ResetTestEnvironment is called.
+        /// </summary>
+        /// <param name="environment">Environment name (Development, Staging, Production)</param>
+        public static void SetTestEnvironment(string environment)
+        {
+            if (string.IsNullOrEmpty(environment))
+                throw new ArgumentException("Environment name cannot be null or empty", nameof(environment));
+            _testEnvironment = environment;
+            _configuration = null; // Force reload of configuration
+        }
+
+        /// <summary>
+        /// Resets the test environment to use the global environment.
+        /// </summary>
+        public static void ResetTestEnvironment()
+        {
+            _testEnvironment = null;
+            _configuration = null; // Force reload of configuration
         }
 
         /// <summary>

@@ -14,6 +14,7 @@ namespace Bird.Tests
     /// - Handling responses
     /// - Working with JSON payloads
     /// - Asserting results
+    /// - Environment selection
     /// </summary>
     [TestFixture]
     public class SampleApiTests : BaseApiTest
@@ -31,8 +32,7 @@ namespace Bird.Tests
         }
 
         /// <summary>
-        /// Tests the health check endpoint.
-        /// Verifies that the API is running and responding correctly.
+        /// Tests the health check endpoint using the default environment.
         /// </summary>
         [Test]
         public async Task HealthCheck_ShouldReturnOk()
@@ -42,6 +42,30 @@ namespace Bird.Tests
 
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.OK);
+        }
+
+        /// <summary>
+        /// Tests the health check endpoint using a specific environment.
+        /// </summary>
+        [Test]
+        public async Task HealthCheck_ShouldReturnOk_OnStaging()
+        {
+            // Arrange
+            SetupTestEnvironment("Staging");
+
+            try
+            {
+                // Act
+                var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
+
+                // Assert
+                AssertResponseCode(response, (int)HttpStatusCode.OK);
+            }
+            finally
+            {
+                // Cleanup
+                CleanupTestEnvironment();
+            }
         }
 
         /// <summary>
@@ -208,30 +232,63 @@ namespace Bird.Tests
             AssertResponseCode(getResponse, (int)HttpStatusCode.NotFound);
         }
 
+        /// <summary>
+        /// Tests creating a resource using the default environment.
+        /// </summary>
         [Test]
-        public async Task CreateResource_Success()
+        [AllureIssue("API-123")]
+        [AllureTms("API-125")]
+        public async Task CreateResource_ShouldReturnCreatedResource()
         {
             // Arrange
-            var modifications = new Dictionary<string, object>
-            {
-                { "name", "Test Resource" },
-                { "description", "This is a test resource" }
-            };
-
             var payload = await _payloadManager.LoadAndModifyPayloadAsync(
                 "create-resource.json",
-                modifications);
+                new Dictionary<string, object>
+                {
+                    { "name", "Test Resource" },
+                    { "description", "This is a test resource" }
+                });
 
             // Act
-            var response = await SendRequestAsync(
-                HttpMethod.Post,
-                "/api/resources",
-                payload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "resources", payload);
 
             // Assert
-            AssertResponseCode(response, 201);
-            var guid = await ExtractGuidFromResponseAsync(response);
-            Assert.That(guid, Is.Not.Null.And.Not.Empty);
+            AssertResponseCode(response, (int)HttpStatusCode.Created);
+            await AssertResponseFieldAsync(response, "data.name", "Test Resource");
+        }
+
+        /// <summary>
+        /// Tests creating a resource using a specific environment.
+        /// </summary>
+        [Test]
+        [AllureIssue("API-124")]
+        [AllureTms("API-126")]
+        public async Task CreateResource_ShouldReturnCreatedResource_OnStaging()
+        {
+            // Arrange
+            SetupTestEnvironment("Staging");
+            var payload = await _payloadManager.LoadAndModifyPayloadAsync(
+                "create-resource.json",
+                new Dictionary<string, object>
+                {
+                    { "name", "Test Resource" },
+                    { "description", "This is a test resource" }
+                });
+
+            try
+            {
+                // Act
+                var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "resources", payload);
+
+                // Assert
+                AssertResponseCode(response, (int)HttpStatusCode.Created);
+                await AssertResponseFieldAsync(response, "data.name", "Test Resource");
+            }
+            finally
+            {
+                // Cleanup
+                CleanupTestEnvironment();
+            }
         }
 
         [Test]

@@ -19,8 +19,28 @@ namespace Bird.Framework
         protected TestLogger _logger = null!;
 
         /// <summary>
-        /// One-time setup method that runs before any tests in the class.
-        /// Initializes the HttpClient with the base URL from configuration and sets up JSON options.
+        /// Sets up the test environment before running the test.
+        /// </summary>
+        /// <param name="environment">Optional environment name. If not provided, uses the environment from command line.</param>
+        protected void SetupTestEnvironment(string? environment = null)
+        {
+            if (!string.IsNullOrEmpty(environment))
+            {
+                TestConfiguration.SetTestEnvironment(environment);
+            }
+        }
+
+        /// <summary>
+        /// Cleans up the test environment after running the test.
+        /// </summary>
+        protected void CleanupTestEnvironment()
+        {
+            TestConfiguration.ResetTestEnvironment();
+        }
+
+        /// <summary>
+        /// One-time setup for all tests in the fixture.
+        /// Initializes the HTTP client and JSON options.
         /// </summary>
         [OneTimeSetUp]
         public virtual void OneTimeSetUp()
@@ -62,8 +82,8 @@ namespace Bird.Framework
         }
 
         /// <summary>
-        /// One-time cleanup method that runs after all tests in the class.
-        /// Disposes of the HttpClient to free resources.
+        /// One-time cleanup for all tests in the fixture.
+        /// Disposes of the HTTP client.
         /// </summary>
         [OneTimeTearDown]
         public virtual void OneTimeTearDown()
@@ -195,7 +215,6 @@ namespace Bird.Framework
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var jsonDoc = JsonDocument.Parse(content);
-                
                 var pathParts = jsonPath.Split('.');
                 var currentElement = jsonDoc.RootElement;
 
