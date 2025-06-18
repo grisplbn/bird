@@ -35,10 +35,10 @@ namespace Bird.Tests
         public async Task HealthCheck_ShouldReturnOk()
         {
             // Act
-            var response = await SendRequestAsync(HttpMethod.Get, "health");
+            var response = await SendRequestAsync<object>(HttpMethod.Get, "health");
 
             // Assert
-            AssertResponseCode(response, HttpStatusCode.OK);
+            AssertResponseCode(response, (int)HttpStatusCode.OK);
         }
 
         /// <summary>
@@ -61,12 +61,12 @@ namespace Bird.Tests
             );
 
             // Act
-            var response = await SendRequestAsync(HttpMethod.Post, "users", payload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
 
             // Assert
-            AssertResponseCode(response, HttpStatusCode.Created);
-            var userId = await ExtractGuidFromResponseAsync(response, "id");
-            Assert.That(userId, Is.Not.EqualTo(Guid.Empty));
+            AssertResponseCode(response, (int)HttpStatusCode.Created);
+            var userId = await ExtractGuidFromResponseAsync(response);
+            Assert.That(!string.IsNullOrEmpty(userId), "User ID should not be empty");
         }
 
         /// <summary>
@@ -89,12 +89,12 @@ namespace Bird.Tests
             );
 
             // Act
-            var response = await SendRequestAsync(HttpMethod.Post, "users", payload);
+            var response = await SendRequestAsync<JsonNode>(HttpMethod.Post, "users", payload);
 
             // Assert
-            AssertResponseCode(response, HttpStatusCode.BadRequest);
+            AssertResponseCode(response, (int)HttpStatusCode.BadRequest);
             var error = await ExtractErrorFromResponseAsync(response);
-            Assert.That(error, Is.Not.Empty);
+            Assert.That(error, Is.Not.Empty, "Error message should not be empty");
         }
 
         [Test]
