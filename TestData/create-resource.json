@@ -1,0 +1,12 @@
+{
+    "name": "Default Resource Name",
+    "description": "Default Resource Description",
+    "metadata": {
+        "version": "1.0",
+        "tags": ["test", "sample"]
+    },
+    "settings": {
+        "enabled": true,
+        "maxRetries": 3
+    }
+} 
