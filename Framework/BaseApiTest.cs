@@ -268,10 +268,11 @@ namespace Bird.Framework
 
         /// <summary>
         /// Extracts a value from the response JSON using a JSON path.
+        /// Supports dot notation and array indices (e.g., "addresses.0.city").
         /// </summary>
         /// <typeparam name="T">Type of the value to extract</typeparam>
         /// <param name="response">HTTP response message</param>
-        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "user.name")</param>
+        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "addresses.0.city")</param>
         /// <returns>Extracted value</returns>
         /// <exception cref="InvalidOperationException">Thrown when value cannot be extracted</exception>
         protected async Task<T> ExtractValueFromResponseAsync<T>(HttpResponseMessage response, string jsonPath)
@@ -281,18 +282,40 @@ namespace Bird.Framework
                 var content = await response.Content.ReadAsStringAsync();
                 var jsonDoc = JsonDocument.Parse(content);
                 var pathParts = jsonPath.Split('.');
-                var currentElement = jsonDoc.RootElement;
+                JsonElement currentElement = jsonDoc.RootElement;
 
                 foreach (var part in pathParts)
                 {
-                    if (currentElement.ValueKind != JsonValueKind.Object)
+                    if (int.TryParse(part, out int index))
                     {
-                        throw new InvalidOperationException($"Cannot navigate to '{part}' in path '{jsonPath}'");
+                        // Array index
+                        if (currentElement.ValueKind == JsonValueKind.Array)
+                        {
+                            if (currentElement.GetArrayLength() <= index)
+                                throw new InvalidOperationException($"Array index {index} out of bounds in path '{jsonPath}'");
+                            currentElement = currentElement[index];
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Expected array at '{part}' in path '{jsonPath}'");
+                        }
                     }
-                    currentElement = currentElement.GetProperty(part);
+                    else
+                    {
+                        // Object property
+                        if (currentElement.ValueKind != JsonValueKind.Object)
+                        {
+                            throw new InvalidOperationException($"Cannot navigate to '{part}' in path '{jsonPath}'");
+                        }
+                        if (!currentElement.TryGetProperty(part, out var nextElement))
+                        {
+                            throw new InvalidOperationException($"Property '{part}' not found in path '{jsonPath}'");
+                        }
+                        currentElement = nextElement;
+                    }
                 }
 
-                var value = currentElement.Deserialize<T>(_jsonOptions);
+                var value = JsonSerializer.Deserialize<T>(currentElement.GetRawText(), _jsonOptions);
                 if (value == null)
                 {
                     throw new InvalidOperationException($"Failed to extract value at path '{jsonPath}'");
@@ -310,10 +333,11 @@ namespace Bird.Framework
 
         /// <summary>
         /// Asserts that a specific field in the response matches the expected value.
+        /// Supports dot notation and array indices (e.g., "addresses.0.city").
         /// </summary>
         /// <typeparam name="T">Type of the value to compare</typeparam>
         /// <param name="response">HTTP response message</param>
-        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "user.name")</param>
+        /// <param name="jsonPath">JSON path to the value (e.g., "data.id" or "addresses.0.city")</param>
         /// <param name="expectedValue">Expected value</param>
         protected async Task AssertResponseFieldAsync<T>(HttpResponseMessage response, string jsonPath, T expectedValue)
         {
@@ -321,7 +345,6 @@ namespace Bird.Framework
             {
                 var actualValue = await ExtractValueFromResponseAsync<T>(response, jsonPath);
                 _logger.LogInfo($"Asserting field '{jsonPath}': Expected {expectedValue}, Got {actualValue}");
-                
                 Assert.That(actualValue, Is.EqualTo(expectedValue),
                     $"Expected value at path '{jsonPath}' to be {expectedValue} but got {actualValue}");
             }
