@@ -2,6 +2,14 @@
 
 A robust test framework for API testing, built with .NET 8.0 and NUnit. This framework provides a structured approach to API testing with support for different environments and configurations.
 
+## Features
+
+- **API Testing**: Comprehensive API testing capabilities with support for various HTTP methods
+- **JSON Handling**: Built-in JSON payload management and validation
+- **Configuration**: Environment-specific configuration management
+- **Allure Reporting**: Detailed test reports with Jira integration
+- **Extensible**: Easy to extend with custom assertions and utilities
+
 ## Project Structure
 
 ```
@@ -27,6 +35,7 @@ Bird/
 - .NET 8.0 SDK or later
 - Visual Studio 2022 or Visual Studio Code
 - Git
+- Allure CLI (for report generation)
 
 ## Getting Started
 
@@ -111,6 +120,30 @@ dotnet test --environment Production
 // At the start of your test class or test setup
 TestConfiguration.Environment = "Staging";
 ```
+
+### Allure Configuration
+
+The framework uses Allure for test reporting. Configuration is in `allureConfig.json`:
+
+```json
+{
+  "allure": {
+    "directory": "allure-results",
+    "links": [
+      {
+        "type": "issue",
+        "urlTemplate": "https://your-jira-instance.atlassian.net/browse/{}"
+      },
+      {
+        "type": "tms",
+        "urlTemplate": "https://your-jira-instance.atlassian.net/browse/{}"
+      }
+    ]
+  }
+}
+```
+
+Update the `urlTemplate` with your Jira instance URL.
 
 ## Writing Tests
 
@@ -401,3 +434,40 @@ The framework uses different colors for different log levels:
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
+
+## Installation
+
+1. Clone the repository
+2. Install Allure CLI:
+   ```bash
+   # Using scoop (Windows)
+   scoop install allure
+
+   # Using chocolatey (Windows)
+   choco install allure-commandline
+
+   # Using npm
+   npm install -g allure-commandline
+   ```
+
+## Usage
+
+### Running Tests
+
+1. Run tests with Allure results:
+   ```bash
+   dotnet test --logger:trx --results-directory:./allure-results
+   ```
+
+2. Generate and view Allure report:
+   ```bash
+   allure serve ./allure-results
+   ```
+
+### Allure Report Features
+
+- **Test Results**: View test execution results with detailed steps
+- **Jira Integration**: Click through to linked Jira issues and test cases
+- **Environment Info**: View test environment details
+- **Attachments**: View request/response data and screenshots
+- **Categories**: View tests by status (Failed, Broken, Skipped, Passed) 

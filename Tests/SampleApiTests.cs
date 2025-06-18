@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text.Json.Nodes;
+using Allure.NUnit.Attributes;
 using Bird.Framework;
 using NUnit.Framework;
 
@@ -51,6 +52,9 @@ namespace Bird.Tests
         /// - Extract and verify the response
         /// </summary>
         [Test]
+        [AllureIssue("API-123")]
+        [AllureIssue("API-124")]
+        [AllureTms("API-125")]
         public async Task CreateUser_ShouldReturnCreatedUserWithId()
         {
             // Arrange
@@ -86,6 +90,8 @@ namespace Bird.Tests
         /// - Extract error messages
         /// </summary>
         [Test]
+        [AllureIssue("API-126")]
+        [AllureTms("API-127")]
         public async Task CreateUser_WithInvalidData_ShouldReturnValidationErrors()
         {
             // Arrange
@@ -104,16 +110,13 @@ namespace Bird.Tests
             AssertResponseCode(response, (int)HttpStatusCode.BadRequest);
             
             // Extract and assert validation errors
-            var errors = await ExtractValueFromResponseAsync<Dictionary<string, string[]>>(response, "errors");
-            Assert.That(errors.ContainsKey("name"), "Should have name validation error");
-            Assert.That(errors.ContainsKey("email"), "Should have email validation error");
-            
-            // Assert specific error messages
-            await AssertResponseFieldAsync(response, "errors.name[0]", "Name is required");
-            await AssertResponseFieldAsync(response, "errors.email[0]", "Invalid email format");
+            await AssertResponseFieldAsync(response, "errors.name", "Name is required");
+            await AssertResponseFieldAsync(response, "errors.email", "Invalid email format");
         }
 
         [Test]
+        [AllureIssue("API-128")]
+        [AllureTms("API-129")]
         public async Task GetUser_ShouldReturnUserDetails()
         {
             // Arrange
@@ -121,8 +124,8 @@ namespace Bird.Tests
                 "create-user.json",
                 new Dictionary<string, object>
                 {
-                    { "name", "Jane Smith" },
-                    { "email", "jane.smith@example.com" }
+                    { "name", "Jane Doe" },
+                    { "email", "jane.doe@example.com" }
                 });
 
             // Create a user first
@@ -135,11 +138,13 @@ namespace Bird.Tests
             // Assert
             AssertResponseCode(response, (int)HttpStatusCode.OK);
             await AssertResponseFieldAsync(response, "data.id", userId);
-            await AssertResponseFieldAsync(response, "data.name", "Jane Smith");
-            await AssertResponseFieldAsync(response, "data.email", "jane.smith@example.com");
+            await AssertResponseFieldAsync(response, "data.name", "Jane Doe");
+            await AssertResponseFieldAsync(response, "data.email", "jane.doe@example.com");
         }
 
         [Test]
+        [AllureIssue("API-130")]
+        [AllureTms("API-131")]
         public async Task UpdateUser_ShouldModifyUserDetails()
         {
             // Arrange
@@ -175,6 +180,8 @@ namespace Bird.Tests
         }
 
         [Test]
+        [AllureIssue("API-132")]
+        [AllureTms("API-133")]
         public async Task DeleteUser_ShouldRemoveUser()
         {
             // Arrange
@@ -182,8 +189,8 @@ namespace Bird.Tests
                 "create-user.json",
                 new Dictionary<string, object>
                 {
-                    { "name", "To Be Deleted" },
-                    { "email", "delete@example.com" }
+                    { "name", "Delete Me" },
+                    { "email", "delete.me@example.com" }
                 });
 
             // Create a user first
