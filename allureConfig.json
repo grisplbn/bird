@@ -1,0 +1,33 @@
+{
+  "allure": {
+    "directory": "allure-results",
+    "links": [
+      {
+        "type": "issue",
+        "urlTemplate": "https://your-jira-instance.atlassian.net/browse/{}"
+      },
+      {
+        "type": "tms",
+        "urlTemplate": "https://your-jira-instance.atlassian.net/browse/{}"
+      }
+    ],
+    "categories": [
+      {
+        "name": "Failed tests",
+        "matchedStatuses": ["failed"]
+      },
+      {
+        "name": "Broken tests",
+        "matchedStatuses": ["broken"]
+      },
+      {
+        "name": "Ignored tests",
+        "matchedStatuses": ["skipped"]
+      },
+      {
+        "name": "Passed tests",
+        "matchedStatuses": ["passed"]
+      }
+    ]
+  }
+} 
