@@ -108,15 +108,20 @@ namespace Bird.Framework
                 else
                 {
                     // Object property
-                    if (current[part] == null)
+                    if (current is not JsonObject obj)
+                    {
+                        throw new InvalidOperationException($"Expected an object to access key '{part}', but found an array or value at path '{string.Join(".", parts.Take(i))}'.");
+                    }
+
+                    if (obj[part] == null)
                     {
                         // If next part is an int, create array, else object
                         if (i + 1 < parts.Length && int.TryParse(parts[i + 1], out _))
-                            current[part] = new JsonArray();
+                            obj[part] = new JsonArray();
                         else
-                            current[part] = new JsonObject();
+                            obj[part] = new JsonObject();
                     }
-                    current = current[part];
+                    current = obj[part];
                 }
                 if (current == null)
                     throw new InvalidOperationException($"Failed to access path {path}");
@@ -148,33 +153,71 @@ namespace Bird.Framework
 
         /// <summary>
         /// Removes a field from the JSON node at the specified path.
+        /// Supports dot notation for nested objects and array indices (e.g., "users.0.email").
         /// </summary>
         /// <param name="node">JsonNode to modify</param>
         /// <param name="path">Dot-notation path to the field to remove</param>
         /// <exception cref="ArgumentNullException">Thrown when node is null</exception>
-        /// <exception cref="InvalidOperationException">Thrown when path cannot be accessed</exception>
         private void RemoveJsonNode(JsonNode node, string path)
         {
             ArgumentNullException.ThrowIfNull(node);
             var parts = path.Split('.');
-            var current = node;
+            JsonNode? current = node;
 
-            // Navigate to the parent node
+            // Navigate to the parent node of the target to be removed.
             for (int i = 0; i < parts.Length - 1; i++)
             {
-                if (current[parts[i]] == null)
+                var part = parts[i];
+                if (int.TryParse(part, out int index))
                 {
+                    // Array index access
+                    if (current is JsonArray arr && arr.Count > index)
+                    {
+                        current = arr[index];
+                    }
+                    else
+                    {
+                        // Path is invalid or index is out of bounds, so nothing to remove.
+                        return;
+                    }
+                }
+                else
+                {
+                    // Object property access
+                    if (current is JsonObject obj && obj.ContainsKey(part))
+                    {
+                        current = obj[part];
+                    }
+                    else
+                    {
+                        // Path is invalid, so nothing to remove.
+                        return;
+                    }
+                }
+
+                if (current == null)
+                {
+                    // A node in the path is null, cannot proceed.
                     return;
                 }
-                current = current[parts[i]] ?? 
-                    throw new InvalidOperationException($"Failed to access path {path}");
             }
 
-            // Remove the field at the final path
             var lastPart = parts[^1];
-            if (current is JsonObject jsonObject)
+            if (int.TryParse(lastPart, out int removeIndex))
             {
-                jsonObject.Remove(lastPart);
+                // Remove an element from a JsonArray by index
+                if (current is JsonArray arr && arr.Count > removeIndex)
+                {
+                    arr.RemoveAt(removeIndex);
+                }
+            }
+            else
+            {
+                // Remove a property from a JsonObject by key
+                if (current is JsonObject jsonObject)
+                {
+                    jsonObject.Remove(lastPart);
+                }
             }
         }
     }
