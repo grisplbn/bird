@@ -1,25 +1,24 @@
-using Tests.Infrastructure.Logging;
+using Tests.Infrastructure.Logging; // <- tu masz LoggingHub
 
-namespace Tests.Infrastructure;
+namespace Client.Acceptance.Tests.Configuration;
 
-public abstract class TestBase
+[Collection("SharedCollectionDefinition")]
+public abstract class SharedCollectionTestBase
 {
-    /// <summary>
-    /// Globalne włączanie/wyłączanie logów dla całego runa.
-    /// Wywołaj JEDEN raz np. w statycznym konstruktorze swojej bazy,
-    /// albo ustaw zmienną środowiskową HTTP_LOG=1.
-    /// </summary>
+    // globalne włączanie/wyłączanie (możesz zawołać np. w static ctorze)
     protected static void SetGlobalLogging(bool enabled) => LoggingHub.SetGlobal(enabled);
 
-    /// <summary>
-    /// Flaga per-test. W teście wystarczy wpisać: enableLogging = true;
-    /// Jeśli nie ruszasz – nic się nie odpala.
-    /// </summary>
+    // per-test: w teście wpisujesz po prostu: enableLogging = true;
     protected bool enableLogging
     {
         set => LoggingHub.SetForCurrentTest(value);
     }
 
-    // (opcjonalnie) możesz w statycznym ctorze wymusić globalne logi, np. z configu:
-    // static TestBase() => SetGlobalLogging(true);
+    // automatyczne włączenie na podstawie ENV (opcjonalnie)
+    static SharedCollectionTestBase()
+    {
+        var env = Environment.GetEnvironmentVariable("HTTP_LOG");
+        if (string.Equals(env, "1", StringComparison.OrdinalIgnoreCase))
+            LoggingHub.SetGlobal(true);
+    }
 }
