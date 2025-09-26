@@ -7,63 +7,67 @@ namespace Client.Acceptance.Tests.Tests.Helpers;
 
 internal static class PhoneHelpers
 {
+    private static object Mask(object obj) => obj; // ewentualne maskowanie
+
     public static async Task<HttpResponseMessage> PostPhoneAsync(HttpClient client, Guid clientId, object phoneObject)
     {
-        var url = $"/api/phone/{clientId}/phones";
+        var postUrl = $"/api/phone/{clientId}/phones";
 
-        LoggingHub.Log($"➡️ POST {url}");
+        LoggingHub.Log($"➡️ POST {postUrl}");
         LoggingHub.LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
-        LoggingHub.LogObject("📤 Request body", phoneObject);
+        LoggingHub.LogObject("📤 Request body", Mask(phoneObject));
 
-        var resp = await client.PostAsJsonAsync(url, phoneObject);
+        var resp = await client.PostAsJsonAsync(postUrl, phoneObject);
         await LoggingHub.LogResponseAsync(resp);
         return resp;
     }
 
     public static async Task<HttpResponseMessage> PutPhoneAsync(HttpClient client, Guid clientId, Guid phoneId, object phoneObject)
     {
-        var url = $"/api/phone/{clientId}/phones/{phoneId}";
+        var putUrl = $"/api/phone/{clientId}/phones/{phoneId}";
 
-        LoggingHub.Log($"➡️ PUT {url}");
+        LoggingHub.Log($"➡️ PUT {putUrl}");
         LoggingHub.LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
-        LoggingHub.LogObject("📤 Request body", phoneObject);
+        LoggingHub.LogObject("📤 Request body", Mask(phoneObject));
 
-        var resp = await client.PutAsJsonAsync(url, phoneObject);
+        var resp = await client.PutAsJsonAsync(putUrl, phoneObject);
         await LoggingHub.LogResponseAsync(resp);
         return resp;
     }
 
     public static async Task<HttpResponseMessage> PostClientWithPhoneAsync(HttpClient client, object clientObject)
     {
-        var url = "/api/clients";
+        var postUrl = "/api/clients";
 
-        LoggingHub.Log($"➡️ POST {url}");
+        LoggingHub.Log($"➡️ POST {postUrl}");
         LoggingHub.LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
-        LoggingHub.LogObject("📤 Request body", clientObject);
+        LoggingHub.LogObject("📤 Request body", Mask(clientObject));
 
-        var resp = await client.PostAsJsonAsync(url, clientObject);
+        var resp = await client.PostAsJsonAsync(postUrl, clientObject);
         await LoggingHub.LogResponseAsync(resp);
         return resp;
     }
 
     public static async Task<HttpResponseMessage> GetPhonesByInstanceIdAsync(HttpClient client, Guid clientId, Guid? instanceId)
     {
-        var url = $"/api/phone/{clientId}/phones/{instanceId}";
-        LoggingHub.Log($"➡️ GET {url}");
+        var getUrl = $"/api/phone/{clientId}/phones/{instanceId}";
+
+        LoggingHub.Log($"➡️ GET {getUrl}");
         LoggingHub.LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
 
-        var resp = await client.GetAsync(url);
+        var resp = await client.GetAsync(getUrl);
         await LoggingHub.LogResponseAsync(resp);
         return resp;
     }
 
     public static async Task<HttpResponseMessage> GetPhonesForClientAsync(HttpClient client, Guid clientId)
     {
-        var url = $"/api/phone/{clientId}/phones";
-        LoggingHub.Log($"➡️ GET {url}");
+        var getUrl = $"/api/phone/{clientId}/phones";
+
+        LoggingHub.Log($"➡️ GET {getUrl}");
         LoggingHub.LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
 
-        var resp = await client.GetAsync(url);
+        var resp = await client.GetAsync(getUrl);
         await LoggingHub.LogResponseAsync(resp);
         return resp;
     }
