@@ -1,0 +1,23 @@
+using Client.Acceptance.Tests.Infrastructure.Logging;
+using Xunit.Abstractions;
+
+namespace Client.Acceptance.Tests.Configuration;
+
+[Collection("SharedCollectionDefinition")]
+public abstract class SharedCollectionTestBase
+{
+    protected SharedCollectionTestBase(ITestOutputHelper output)
+    {
+        // Przekazujemy ITestOutputHelper do globalnego huba
+        OutputHub.UseITestOutput(output);
+
+        // Włączamy logowanie globalnie (działa we wszystkich helperach)
+        OutputHub.SetGlobal(true);
+    }
+
+    // Opcjonalne sterowanie: enableLogging = true/false per test
+    protected bool enableLogging
+    {
+        set => OutputHub.SetForCurrentTest(value);
+    }
+}
