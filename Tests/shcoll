@@ -2,30 +2,49 @@ using Client.Acceptance.Tests.Infrastructure.Logging;
 
 namespace Client.Acceptance.Tests.Configuration;
 
+/// <summary>
+/// Bazowa klasa wszystkich testów.
+/// Zawiera globalny i per-testowy przełącznik logowania requestów i responsów.
+/// </summary>
 [Collection("SharedCollectionDefinition")]
 public abstract class SharedCollectionTestBase
 {
-    // Statyczny ctor uruchomi się raz na assembly i przygotuje Trace.
+    // Statyczny konstruktor — wykona się raz przy starcie testów
     static SharedCollectionTestBase()
     {
-        // pierwszy log zawoła EnsureTraceListeners, ale ten „touch” gwarantuje JIT
-        // i od razu odczyta ENV HTTP_LOG=1 (jeśli ustawione) przez pole _globalEnabled.
-        _ = typeof(LoggingHub);
+        // Upewnij się, że Trace jest podpięty do konsoli i pliku,
+        // żeby logi były widoczne w Test Explorerze → Output (Tests)
+        LoggingHub.Initialize();
+
+        // Domyślnie logi są wyłączone (globalnie false)
+        _globalLoggingEnabled = false;
+    }
+
+    // ---- PRYWATNE POLE DO GLOBALNEJ KONTROLI ----
+    private static bool _globalLoggingEnabled;
+
+    /// <summary>
+    /// Globalne sterowanie logowaniem dla wszystkich testów.
+    /// Jeśli ustawisz na true – logi są generowane we wszystkich testach.
+    /// Jeśli ustawisz na false – logi są domyślnie wyłączone (chyba że dany test je włączy).
+    /// </summary>
+    protected static void SetGlobalLogging(bool enabled)
+    {
+        _globalLoggingEnabled = enabled;
+        LoggingHub.SetGlobal(enabled);
     }
 
     /// <summary>
-    /// Globalne sterowanie logami dla całego przebiegu testów.
-    /// Użyj raz (np. w static ctorze klasy bazowej nadrzędnej) jeśli chcesz wymusić.
-    /// Alternatywa: ustaw zmienną środowiskową HTTP_LOG=1.
-    /// </summary>
-    protected static void SetGlobalLogging(bool enabled) => LoggingHub.SetGlobal(enabled);
-
-    /// <summary>
-    /// Per-test przełącznik. W teście wpisz: enableLogging = true; aby włączyć logi tylko dla tego testu.
-    /// Bez tej linijki – logi są wyłączone (chyba że globalnie włączone).
+    /// Per-testowy przełącznik.  
+    /// W teście wpisz: <c>enableLogging = true;</c> aby włączyć logi tylko dla tego testu.  
     /// </summary>
     protected bool enableLogging
     {
-        set => LoggingHub.SetForCurrentTest(value);
+        set
+        {
+            // Jeśli globalnie logowanie wyłączone, włączamy tylko dla bieżącego testu
+            if (!_globalLoggingEnabled)
+                LoggingHub.SetForCurrentTest(value);
+        }
     }
 }
