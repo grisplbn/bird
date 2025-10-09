@@ -1,0 +1,21 @@
+using Client.Acceptance.Tests.Tests.Helpers;
+
+namespace Client.Acceptance.Tests.Configuration;
+
+[Collection("SharedCollectionDefinition")]
+public abstract class SharedCollectionTestBase
+{
+    // Uruchamia się raz przy starcie testów; nie wymaga :base(...)
+    static SharedCollectionTestBase()
+    {
+        // włącz globalnie (na dziś ON). Możesz wyłączyć, jeśli chcesz ciszę.
+        PhoneHelpers.SetGlobalLogging(true);
+    }
+
+    // (opcjonalnie) per-test: w dowolnym teście możesz napisać:
+    // enableLogging = true/false;
+    protected bool enableLogging
+    {
+        set => PhoneHelpers.SetGlobalLogging(value);
+    }
+}
