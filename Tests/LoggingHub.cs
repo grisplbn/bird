@@ -8,11 +8,7 @@ namespace Client.Acceptance.Tests.Infrastructure.Logging;
 internal static class LoggingHub
 {
     // ===== PRZEŁĄCZNIKI =====
-    // Globalny (domyślnie OFF; możesz też włączyć ENV HTTP_LOG=1)
-    private static volatile bool _globalEnabled =
-        string.Equals(Environment.GetEnvironmentVariable("HTTP_LOG"), "1", StringComparison.OrdinalIgnoreCase);
-
-    // Per-test (AsyncLocal => izolacja przy równoległym uruchamianiu testów)
+    private static volatile bool _globalEnabled = false;
     private static readonly AsyncLocal<bool?> _perTestEnabled = new();
 
     public static void SetGlobal(bool enabled) => _globalEnabled = enabled;
@@ -27,19 +23,19 @@ internal static class LoggingHub
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    // ===== TRACE LISTENERS (jednorazowo) =====
+    // ===== TRACE LISTENERS =====
     private static int _listenersReady;
-    private static void EnsureTraceListeners()
+    public static void Initialize()
     {
         if (Interlocked.Exchange(ref _listenersReady, 1) == 1) return;
 
         Trace.Listeners.Clear();
         Trace.AutoFlush = true;
 
-        // Konsola – Test Explorer -> Output (Tests) przechwytuje stdout
+        // Konsola → widoczne w Test Explorer → Output (Tests)
         Trace.Listeners.Add(new TextWriterTraceListener(Console.Out, "console"));
 
-        // (opcjonalnie) log do pliku
+        // Opcjonalnie zapis do pliku
         try
         {
             var dir = Path.Combine(AppContext.BaseDirectory, "TestResults");
@@ -47,14 +43,14 @@ internal static class LoggingHub
             var path = Path.Combine(dir, "http.log");
             Trace.Listeners.Add(new TextWriterTraceListener(path, "file"));
         }
-        catch { /* brak uprawnień? pomijamy */ }
+        catch { /* ignoruj brak dostępu */ }
     }
 
-    // ===== API LOGOWANIA – używane przez helpery =====
+    // ===== API LOGOWANIA =====
     public static void Log(string message)
     {
         if (!IsEnabled) return;
-        EnsureTraceListeners();
+        Initialize();
         Trace.WriteLine(message);
     }
 
@@ -91,7 +87,7 @@ internal static class LoggingHub
                 Log($"{title}:\n{JsonSerializer.Serialize(doc, Pretty)}");
                 return;
             }
-            catch { /* fallback do RAW */ }
+            catch { /* fallback */ }
         }
 
         Log($"{title} (RAW):\n{raw}");
