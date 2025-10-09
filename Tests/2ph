@@ -1,0 +1,151 @@
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Xunit.Abstractions;
+
+namespace Client.Acceptance.Tests.Tests.Helpers;
+
+internal static class PhoneHelpers
+{
+    // ===== sterowanie (globalnie ON) =====
+    public static volatile bool Enabled = true;
+    public static void SetGlobalLogging(bool enabled) => Enabled = enabled;
+
+    // ===== xUnit output (opcjonalny) =====
+    private static ITestOutputHelper? _output;
+    public static void UseITestOutput(ITestOutputHelper output) => _output = output;
+
+    // ===== PRETTY JSON =====
+    private static readonly JsonSerializerOptions PrettyJson = new()
+    {
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
+    // ===== niskopoziomowe logowanie =====
+    private static void Log(string msg)
+    {
+        if (!Enabled) return;
+
+        if (_output != null)
+            _output.WriteLine(msg);          // preferowane: Output (Tests)
+        else
+            Console.Out.WriteLine(msg);      // fallback: też widoczne w Output (Tests)
+    }
+
+    private static void LogHeaders(string title, HttpHeaders headers)
+    {
+        if (!Enabled || !headers.Any()) return;
+        var lines = headers.Select(h => $"{h.Key}: {string.Join(", ", h.Value)}");
+        Log($"{title}:\n{string.Join("\n", lines)}");
+    }
+
+    private static void LogObject(string title, object? obj)
+    {
+        if (!Enabled) return;
+        try { Log($"{title}:\n{JsonSerializer.Serialize(obj, PrettyJson)}"); }
+        catch { Log($"{title}: <UNSERIALIZABLE OBJECT>"); }
+    }
+
+    private static void LogJsonRaw(string title, string raw, string? contentType)
+    {
+        if (!Enabled) return;
+
+        if (string.IsNullOrWhiteSpace(raw)) { Log($"{title}: <EMPTY>"); return; }
+
+        var isJson = (contentType ?? "").Contains("json", StringComparison.OrdinalIgnoreCase);
+        if (isJson)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                Log($"{title}:\n{JsonSerializer.Serialize(doc, PrettyJson)}");
+                return;
+            }
+            catch { /* fallback do RAW */ }
+        }
+
+        Log($"{title} (RAW):\n{raw}");
+    }
+
+    private static async Task LogResponseAsync(HttpResponseMessage resp)
+    {
+        if (!Enabled) return;
+
+        Log($"⬅️ {(int)resp.StatusCode} {resp.ReasonPhrase}");
+        LogHeaders("⬅️ Response headers", resp.Headers);
+
+        if (resp.Content != null)
+        {
+            LogHeaders("⬅️ Content headers", resp.Content.Headers);
+            var raw = await resp.Content.ReadAsStringAsync();
+            LogJsonRaw("📥 Response body", raw, resp.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
+    // ===== Twoje metody – bez zmian w sygnaturach =====
+
+    public static async Task<HttpResponseMessage> PostPhoneAsync(HttpClient client, Guid clientId, object phoneObject)
+    {
+        var postUrl = $"/api/phone/{clientId}/phones";
+
+        Log($"➡️ POST {postUrl}");
+        LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
+        LogObject("📤 Request body", phoneObject);
+
+        var resp = await client.PostAsJsonAsync(postUrl, phoneObject);
+        await LogResponseAsync(resp);
+        return resp;
+    }
+
+    public static async Task<HttpResponseMessage> PutPhoneAsync(HttpClient client, Guid clientId, Guid phoneId, object phoneObject)
+    {
+        var putUrl = $"/api/phone/{clientId}/phones/{phoneId}";
+
+        Log($"➡️ PUT {putUrl}");
+        LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
+        LogObject("📤 Request body", phoneObject);
+
+        var resp = await client.PutAsJsonAsync(putUrl, phoneObject);
+        await LogResponseAsync(resp);
+        return resp;
+    }
+
+    public static async Task<HttpResponseMessage> PostClientWithPhoneAsync(HttpClient client, object clientObject)
+    {
+        var postUrl = "/api/clients";
+
+        Log($"➡️ POST {postUrl}");
+        LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
+        LogObject("📤 Request body", clientObject);
+
+        var resp = await client.PostAsJsonAsync(postUrl, clientObject);
+        await LogResponseAsync(resp);
+        return resp;
+    }
+
+    public static async Task<HttpResponseMessage> GetPhonesByInstanceIdAsync(HttpClient client, Guid clientId, Guid? instanceId)
+    {
+        var getUrl = $"/api/phone/{clientId}/phones/{instanceId}";
+
+        Log($"➡️ GET {getUrl}");
+        LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
+
+        var resp = await client.GetAsync(getUrl);
+        await LogResponseAsync(resp);
+        return resp;
+    }
+
+    public static async Task<HttpResponseMessage> GetPhonesForClientAsync(HttpClient client, Guid clientId)
+    {
+        var getUrl = $"/api/phone/{clientId}/phones";
+
+        Log($"➡️ GET {getUrl}");
+        LogHeaders("➡️ Request headers", client.DefaultRequestHeaders);
+
+        var resp = await client.GetAsync(getUrl);
+        await LogResponseAsync(resp);
+        return resp;
+    }
+}
