@@ -1,0 +1,18 @@
+using Client.Acceptance.Tests.Infrastructure.Logging;
+
+namespace Client.Acceptance.Tests.Configuration;
+
+[Collection("SharedCollectionDefinition")]
+public abstract class SharedCollectionTestBase
+{
+    static SharedCollectionTestBase()
+    {
+        RequestLog.SetGlobal(true); // logi ON dla wszystkich testów
+    }
+
+    // opcjonalnie, per-test: w teście możesz napisać enableLogging = true/false;
+    protected bool enableLogging
+    {
+        set => RequestLog.SetForCurrentTest(value);
+    }
+}
