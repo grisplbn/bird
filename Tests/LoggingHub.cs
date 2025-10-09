@@ -3,41 +3,43 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Tests.Infrastructure.Logging;
+namespace Client.Acceptance.Tests.Infrastructure.Logging;
 
 internal static class LoggingHub
 {
-    // --- GLOBAL / PER-TEST PRZEŁĄCZNIKI ---
+    // ===== PRZEŁĄCZNIKI =====
+    // Globalny (domyślnie OFF; możesz też włączyć ENV HTTP_LOG=1)
     private static volatile bool _globalEnabled =
         string.Equals(Environment.GetEnvironmentVariable("HTTP_LOG"), "1", StringComparison.OrdinalIgnoreCase);
 
+    // Per-test (AsyncLocal => izolacja przy równoległym uruchamianiu testów)
     private static readonly AsyncLocal<bool?> _perTestEnabled = new();
 
     public static void SetGlobal(bool enabled) => _globalEnabled = enabled;
     public static void SetForCurrentTest(bool enabled) => _perTestEnabled.Value = enabled;
     public static bool IsEnabled => _perTestEnabled.Value ?? _globalEnabled;
 
-    // --- JSON pretty ---
-    private static readonly JsonSerializerOptions PrettyJson = new()
+    // ===== PRETTY JSON =====
+    private static readonly JsonSerializerOptions Pretty = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    // --- TRACE LISTENERS (jednorazowo) ---
+    // ===== TRACE LISTENERS (jednorazowo) =====
     private static int _listenersReady;
-    public static void EnsureTraceListeners()
+    private static void EnsureTraceListeners()
     {
         if (Interlocked.Exchange(ref _listenersReady, 1) == 1) return;
 
         Trace.Listeners.Clear();
         Trace.AutoFlush = true;
 
-        // Konsola – widoczna w Test Explorer → Output (Tests)
+        // Konsola – Test Explorer -> Output (Tests) przechwytuje stdout
         Trace.Listeners.Add(new TextWriterTraceListener(Console.Out, "console"));
 
-        // Opcjonalnie plik z logiem
+        // (opcjonalnie) log do pliku
         try
         {
             var dir = Path.Combine(AppContext.BaseDirectory, "TestResults");
@@ -48,12 +50,12 @@ internal static class LoggingHub
         catch { /* brak uprawnień? pomijamy */ }
     }
 
-    // --- API do logowania (używane przez *Helpers) ---
-    public static void Log(string msg)
+    // ===== API LOGOWANIA – używane przez helpery =====
+    public static void Log(string message)
     {
         if (!IsEnabled) return;
         EnsureTraceListeners();
-        Trace.WriteLine(msg);
+        Trace.WriteLine(message);
     }
 
     public static void LogHeaders(string title, HttpHeaders headers)
@@ -66,7 +68,7 @@ internal static class LoggingHub
     public static void LogObject(string title, object? obj)
     {
         if (!IsEnabled) return;
-        try { Log($"{title}:\n{JsonSerializer.Serialize(obj, PrettyJson)}"); }
+        try { Log($"{title}:\n{JsonSerializer.Serialize(obj, Pretty)}"); }
         catch { Log($"{title}: <UNSERIALIZABLE OBJECT>"); }
     }
 
@@ -86,11 +88,12 @@ internal static class LoggingHub
             try
             {
                 using var doc = JsonDocument.Parse(raw);
-                Log($"{title}:\n{JsonSerializer.Serialize(doc, PrettyJson)}");
+                Log($"{title}:\n{JsonSerializer.Serialize(doc, Pretty)}");
                 return;
             }
-            catch { /* fallback to raw */ }
+            catch { /* fallback do RAW */ }
         }
+
         Log($"{title} (RAW):\n{raw}");
     }
 
